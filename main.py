@@ -5,12 +5,25 @@ from pytest import Session
 from db.database import Base, engine, sessionLocal
 from sqlalchemy_utils import create_database, database_exists
 from schemas.users import User_schema
+from schemas.description import Description
 from db.models import User
 import os
 import httpx
 from passlib.context import CryptContext
+from fastapi.middleware.cors import CORSMiddleware
 import jwt
 app= FastAPI()
+
+origins= [
+    '*',]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def getdb():
     db=sessionLocal()
@@ -35,7 +48,7 @@ def verify_password(inserted_password:str, hashed_password: str):
 
 
 def verify_token(token:str):
-    payload= jwt.decode(token,os.getenv('JWT_TOKEN'), algorithms= os.getenv('ALGORITHM'))
+    payload= jwt.decode(token,os.getenv('JWT_TOKEN'), algorithms= [os.getenv('ALGORITHM')])
     if payload:
         return payload
     
@@ -48,7 +61,7 @@ def create_token(user:User_schema):
 def verify_user_token_in_db(decoded_token:str, db):
    user_db= db.query(User).filter(User.username == decoded_token["username"]).first()
    if not user_db:
-      raise HTTPException(status_code=400, detail="not found")
+      raise HTTPException(status_code=404, detail="token not found")
    return decoded_token['username']
 
 
@@ -56,9 +69,9 @@ def verify_user_token_in_db(decoded_token:str, db):
 def login(user: User_schema, db:Session=Depends(getdb)):
      inserted_user= db.query(User).filter(User.username == user.username).first()
      if not inserted_user :
-         raise HTTPException(status_code='400', detail="User not exist")
+         raise HTTPException(status_code=404, detail="User not exist")
      if not verify_password(user.password, inserted_user.password):
-         raise HTTPException(status_code='400', detail="Invalid password")
+         raise HTTPException(status_code=401, detail="Invalid password")
      token= create_token(user)
      return token
 
@@ -67,8 +80,10 @@ oauth2_schema = OAuth2PasswordBearer(tokenUrl="token")
 
 @app.post('/register')
 def create_user(inserted_user:User_schema, db:Session =Depends(getdb)):
+    print(inserted_user.username)
     if db.query(User).filter(User.username == inserted_user.username).first():
                raise HTTPException(status_code=409,detail="User already exist" )
+    print(inserted_user.username)
     user_db= User(
        username = inserted_user.username,
        password = hashpassword(inserted_user.password)
@@ -80,17 +95,16 @@ def create_user(inserted_user:User_schema, db:Session =Depends(getdb)):
 
 
 @app.post('/translate')
-async def translate_txt(text:str,choice:str, token:str=Depends(oauth2_schema), db:Session= Depends(getdb)):
-   print(text)
-   print("hello")
+async def translate_txt(description: Description, token:str=Depends(oauth2_schema), db:Session= Depends(getdb)):
+   print("test")
+   print(token)
    decoded_token= verify_token(token)
-   print("uu")
    print(decoded_token)
    verified_token = verify_user_token_in_db(decoded_token, db)
-   print(choice, decoded_token)
+   print(description.choice, decoded_token)
    
    if verified_token:
-     if choice == "FR -> EN":
+     if description.choice == "EN -> FR":
         API_URL = os.getenv('API_URL_FR_TO_ENG')
      else:
         API_URL = os.getenv('API_URL_EN_TO_FR')
@@ -106,8 +120,10 @@ async def translate_txt(text:str,choice:str, token:str=Depends(oauth2_schema), d
         return response.json()
 
      output = query({
-       "inputs": text,
+       "inputs": description.text,
       })
+     print('ou')
+     print('output is:', output)
      return output
 
 
