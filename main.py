@@ -2,6 +2,7 @@ from encodings.base64_codec import base64_encode
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pytest import Session
+import uvicorn
 from db.database import Base, engine, sessionLocal
 from sqlalchemy_utils import create_database, database_exists
 from schemas.users import User_schema
@@ -13,7 +14,11 @@ from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 import jwt
 app= FastAPI()
+PORT = int(os.environ.get("PORT", 8000))
 
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=True)
+    
 origins= [
     '*',]
 
@@ -82,7 +87,7 @@ oauth2_schema = OAuth2PasswordBearer(tokenUrl="token")
 def create_user(inserted_user:User_schema, db:Session =Depends(getdb)):
     print(inserted_user.username)
     if db.query(User).filter(User.username == inserted_user.username).first():
-               raise HTTPException(status_code=409,detail="User already exist" )
+               raise HTTPException(status_code=409,detail="User already exist please try to login" )
     print(inserted_user.username)
     user_db= User(
        username = inserted_user.username,
