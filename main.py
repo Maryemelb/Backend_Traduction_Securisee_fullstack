@@ -87,7 +87,7 @@ oauth2_schema = OAuth2PasswordBearer(tokenUrl="token")
 def create_user(inserted_user:User_schema, db:Session =Depends(getdb)):
     print(inserted_user.username)
     if db.query(User).filter(User.username == inserted_user.username).first():
-               raise HTTPException(status_code=409,detail="User already exist" )
+               raise HTTPException(status_code=409,detail="User already exist please try to login" )
     print(inserted_user.username)
     user_db= User(
        username = inserted_user.username,
