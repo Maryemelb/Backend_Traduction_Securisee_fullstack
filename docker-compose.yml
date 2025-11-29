@@ -1,7 +1,40 @@
+version: "3.9"
+
 services:
   backend: 
-    build: /backend
-     -ports: "8000:8000"
+    build: .
+    image: backend_traduction_image 
+    ports: 
+      - "8000:8000"
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_NAME=traduction
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=1111
+      - DATABASE_PORT=5432
+      - NEXT_PUBLIC_BACKEND_API=http://backend:8000
+    depends_on:
+      - db
+
   frontend:
-    build: /frontend
-    -ports: "3000:3000"
+    build: ../frontend_traduction_fullstack
+    image: frontend_traduction_image
+    ports: 
+      - "3000:3000"
+    environment:
+    - NEXT_PUBLIC_BACKEND_API=http://localhost:8000
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1111
+      # POSTGRES_DB:traduction
+    ports:
+      - "5432:5432"
+  
+volumes:
+  postgres_data:
